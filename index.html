@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jogo Múltiplos e Divisores (MD)</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text: #f8fafc;
+      --accent: #38bdf8;
+      --valid: #22c55e;
+      --visited: #475569;
+      --locked: #ef4444;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 1rem; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+    
+    header { text-align: center; margin-bottom: 1.5rem; max-width: 800px; }
+    h1 { color: var(--accent); margin-bottom: 0.5rem; }
+    p { color: #94a3b8; font-size: 0.95rem; line-height: 1.4; }
+
+    .controls { background: var(--card-bg); padding: 1rem; border-radius: 12px; display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; justify-content: center; margin-bottom: 1.5rem; border: 1px solid #334155; }
+    label { font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
+    input[type="number"] { width: 80px; padding: 0.4rem; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #fff; font-size: 1rem; text-align: center; }
+    button { background: var(--accent); color: #0f172a; font-weight: 700; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+    button:hover { opacity: 0.9; transform: translateY(-1px); }
+    button.reset { background: #64748b; color: #fff; }
+
+    .stats { display: flex; gap: 1.5rem; font-size: 1.1rem; font-weight: bold; margin-bottom: 1rem; }
+    .stat-box { background: var(--card-bg); padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid #334155; }
+    .stat-val { color: var(--accent); }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 8px; width: 100%; max-width: 900px; margin-bottom: 1.5rem; }
+    .cell { aspect-ratio: 1; background: var(--card-bg); border: 2px solid #334155; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem; cursor: pointer; transition: all 0.2s; user-select: none; }
+    
+    .cell.selectable { cursor: pointer; border-color: var(--accent); }
+    .cell.current { background: var(--accent); color: #0f172a; border-color: #fff; transform: scale(1.05); }
+    .cell.valid { background: rgba(34, 197, 94, 0.2); border-color: var(--valid); color: #4ade80; animation: pulse 1.5s infinite; }
+    .cell.visited { background: var(--visited); color: #94a3b8; border-color: transparent; opacity: 0.5; cursor: not-allowed; }
+
+    .path-log { background: var(--card-bg); width: 100%; max-width: 900px; padding: 1rem; border-radius: 12px; border: 1px solid #334155; }
+    .path-log h3 { margin-bottom: 0.5rem; font-size: 1rem; color: var(--accent); }
+    .path-sequence { word-break: break-all; font-family: monospace; font-size: 0.95rem; color: #cbd5e1; line-height: 1.6; }
+
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Múltiplos e Divisores (MD)</h1>
+    <p>Escolha um número para começar. Depois, você só pode avançar para casas que sejam <strong>múltiplas</strong> ou <strong>divisoras</strong> do número atual. Cada casa só pode ser visitada uma única vez!</p>
+  </header>
+
+  <div class="controls">
+    <label>
+      Tamanho do Tabuleiro:
+      <input type="number" id="max-num" value="50" min="5" max="500">
+    </label>
+    <button onclick="reiniciarJogo()">Novo Jogo</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat-box">Casas Visitadas: <span id="count" class="stat-val">0</span> / <span id="total-val">50</span></div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="path-log">
+    <h3>Caminho Percorrido:</h3>
+    <div class="path-sequence" id="path-log">Clique em qualquer número para iniciar.</div>
+  </div>
+
+  <script>
+    let N = 50;
+    let atual = null;
+    let visitados = new Set();
+    let caminho = [];
+
+    function ehValido(prox) {
+      if (visitados.has(prox)) return false;
+      if (atual === null) return true;
+      return (prox % atual === 0 || atual % prox === 0);
+    }
+
+    function obterJogadasValidas() {
+      if (atual === null) return [];
+      const validas = [];
+      for (let i = 1; i <= N; i++) {
+        if (!visitados.has(i) && (i % atual === 0 || atual % i === 0)) {
+          validas.push(i);
+        }
+      }
+      return validas;
+    }
+
+    function jogar(num) {
+      if (atual !== null && !ehValido(num)) return;
+
+      atual = num;
+      visitados.add(num);
+      caminho.push(num);
+
+      renderizar();
+
+      const proximas = obterJogadasValidas();
+      if (proximas.length === 0 && visitados.size < N) {
+        setTimeout(() => alert(`Fim de jogo! Você percorreu ${visitados.size} de ${N} casas.`), 100);
+      } else if (visitados.size === N) {
+        setTimeout(() => alert(`Incrível! Você conseguiu completar todas as ${N} casas!`), 100);
+      }
+    }
+
+    function renderizar() {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+
+      const validas = obterJogadasValidas();
+
+      for (let i = 1; i <= N; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.textContent = i;
+
+        if (i === atual) {
+          cell.classList.add('current');
+        } else if (visitados.has(i)) {
+          cell.classList.add('visited');
+        } else if (atual === null) {
+          cell.classList.add('selectable');
+          cell.onclick = () => jogar(i);
+        } else if (validas.includes(i)) {
+          cell.classList.add('valid');
+          cell.onclick = () => jogar(i);
+        }
+
+        grid.appendChild(cell);
+      }
+
+      document.getElementById('count').textContent = visitados.size;
+      document.getElementById('total-val').textContent = N;
+      
+      const log = document.getElementById('path-log');
+      log.textContent = caminho.length > 0 ? caminho.join(' ➔ ') : 'Clique em qualquer número para iniciar.';
+    }
+
+    function reiniciarJogo() {
+      const inputN = parseInt(document.getElementById('max-num').value);
+      N = isNaN(inputN) || inputN < 5 ? 50 : Math.min(inputN, 500);
+      document.getElementById('max-num').value = N;
+      
+      atual = null;
+      visitados.clear();
+      caminho = [];
+      renderizar();
+    }
+
+    // Inicializar
+    reiniciarJogo();
+  </script>
+</body>
+</html>
